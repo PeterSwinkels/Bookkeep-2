@@ -1,0 +1,1 @@
+A Bookkeeping program I once wrote in QuickBASIC/QBasic slightly refactored to take advantage of the features specific to Visual BASIC for MS-DOS. - See the QBasic version which is also on my GitHub for more details.
