@@ -1,3 +1,5 @@
+'$INCLUDE: 'Constant.bi'
+
 OPTION EXPLICIT
 DEFINT A-Z
 CONST CELL_WIDTH = 20
@@ -5,7 +7,6 @@ CONST COL_DATE = 0
 CONST COL_DESCRIPTION = 1
 CONST COL_EXPENSE = 3
 CONST COL_INCOME = 2
-CONST FALSE = 0
 CONST FILE_NAME_FILTER$ = "*/<>?[\]| "
 CONST MAXIMUM_DATA_LENGTH = 18
 CONST MAXIMUM_NUMBER_LENGTH = 13
@@ -14,7 +15,6 @@ CONST NO_PAGE = 255
 CONST NO_ROW = 255
 CONST NUMBER_MASK$ = "#############0.00"
 CONST ROWS_PER_PAGE = 21
-CONST TRUE = -1
 
 TYPE LossGainBlockStr
  Page AS INTEGER
@@ -29,7 +29,7 @@ END TYPE
 
 DECLARE SUB CalculateLossOrGain (Table() AS STRING, Selection AS SelectionStr, LossGainBlock AS LossGainBlockStr)
 DECLARE SUB CalculateLossOrGainSelection (Table() AS STRING)
-DECLARE SUB Center (x AS INTEGER, Text AS STRING)
+DECLARE SUB CenterText (x AS INTEGER, Text AS STRING)
 DECLARE SUB ClearLossGainBlock (Table() AS STRING, LossGainBlock AS LossGainBlockStr)
 DECLARE SUB CreateFile (FileName AS STRING)
 DECLARE SUB DisplayCell (Table() AS STRING, Row AS INTEGER, Column AS INTEGER, Page AS INTEGER)
@@ -57,12 +57,11 @@ DECLARE SUB SetLossGainBlock (Table() AS STRING, Selection AS SelectionStr, Page
 DECLARE SUB Sort (Table() AS STRING, SortColumn AS INTEGER, LossGainBlock AS LossGainBlockStr)
 DECLARE FUNCTION AddTableToList (FileName AS STRING) AS STRING
 DECLARE FUNCTION Choose (x AS INTEGER, y AS INTEGER, Prompt AS STRING, Choices AS STRING) AS STRING
-DECLARE FUNCTION FileExists (FileName AS STRING) AS INTEGER
 DECLARE FUNCTION FileNamePrompt (FileName AS STRING) AS STRING
 DECLARE FUNCTION FormatTableFileName (FileName AS STRING) AS STRING
 DECLARE FUNCTION GetDate () AS STRING
 DECLARE FUNCTION GetDescription () AS STRING
-DECLARE FUNCTION GetInput (x AS INTEGER, y AS INTEGER, Prompt AS STRING, MaximumLength AS INTEGER, IsFilePrompt AS INTEGER, IsNumeric AS INTEGER, Default AS STRING) AS STRING
+DECLARE FUNCTION GetInput (x AS INTEGER, y AS INTEGER, Prompt AS STRING, MaximumLength AS INTEGER, IsFilePrompt AS INTEGER, IsNumeric AS INTEGER, DEFAULT AS STRING) AS STRING
 DECLARE FUNCTION GetTime () AS STRING
 DECLARE FUNCTION InLossGainBlock (Row AS INTEGER, Column AS INTEGER, Page AS INTEGER, LossGainBlock AS LossGainBlockStr) AS INTEGER
 DECLARE FUNCTION LoadTable (Table() AS STRING, FileName AS STRING, TableFileName AS STRING, Selection AS SelectionStr, LossGainBlock AS LossGainBlockStr) AS STRING
@@ -92,8 +91,8 @@ DIM ErrorCode AS INTEGER
 
  ErrorCode = ERR
  PCOPY 0, 2: COLOR 0, 7
- Center 6, " " + ERROR$(ErrorCode) + ". "
- COLOR 7, 0: Center 0, " Spacebar = Ignore error  Enter = Retry  Escape = Quit  "
+ CenterText 6, " " + ERROR$(ErrorCode) + ". "
+ COLOR 7, 0: CenterText 0, " Spacebar = Ignore error  Enter = Retry  Escape = Quit  "
  IgnoreError = FALSE
  DO
   SELECT CASE INPUT$(1)
@@ -181,7 +180,7 @@ DIM Row AS INTEGER
  END IF
 END SUB
 
-SUB Center (x AS INTEGER, Text AS STRING)
+SUB CenterText (x AS INTEGER, Text AS STRING)
  IF x > 0 THEN LOCATE x
  LOCATE , INT(40 - (LEN(Text) / 2))
  PRINT Text
@@ -234,7 +233,7 @@ DIM FileH AS INTEGER
 DIM HelpText AS STRING
 
  DrawBox 5, 16, 46, 13
- Center 5, "´ Help Ã"
+ CenterText 5, "´ Help Ã"
 
  IgnoreError = FALSE
  FileH = FREEFILE
@@ -252,9 +251,9 @@ END SUB
 SUB DisplayInformation ()
  DrawBox 5, 28, 22, 3
 
- Center 6, "Bookkeeping 2"
- Center 0, "By: Peter Swinkels"
- Center 0, "***1997***"
+ CenterText 6, "Bookkeeping 2"
+ CenterText 0, "By: Peter Swinkels"
+ CenterText 0, "***1997***"
 
  DO WHILE INKEY$ = "": LOOP
 END SUB
@@ -295,7 +294,7 @@ DIM SaveTime AS STRING
 
  PCOPY 0, 1
  
- IF NOT FileExists("Names.lst") THEN CreateFile "Names.lst"
+ IF DIR$("Names.lst") = "" THEN CreateFile "Names.lst"
 
  IgnoreError = FALSE
  FileH = FREEFILE
@@ -358,10 +357,6 @@ DIM Row AS INTEGER
  CLOSE FileH
 END SUB
 
-FUNCTION FileExists (FileName AS STRING) AS INTEGER
- FileExists = NOT (DIR$(FileName) = "")
-END FUNCTION
-
 FUNCTION FileNamePrompt (FileName AS STRING) AS STRING
  DrawBox 5, 28, 22, 1
  FileNamePrompt = GetInput(6, 29, " File Name: ", 8, TRUE, FALSE, FileName)
@@ -404,11 +399,11 @@ FUNCTION GetDescription () AS STRING
  GetDescription = GetInput(8, 23, " Description: ", MAXIMUM_DATA_LENGTH, FALSE, FALSE, "")
 END FUNCTION
 
-FUNCTION GetInput (x AS INTEGER, y AS INTEGER, Prompt AS STRING, MaximumLength AS INTEGER, IsFilePrompt AS INTEGER, IsNumeric AS INTEGER, Default AS STRING) AS STRING
+FUNCTION GetInput (x AS INTEGER, y AS INTEGER, Prompt AS STRING, MaximumLength AS INTEGER, IsFilePrompt AS INTEGER, IsNumeric AS INTEGER, DEFAULT AS STRING) AS STRING
 DIM KeyStroke AS STRING
 DIM Text AS STRING
 
- Text = Default
+ Text = DEFAULT
  
  COLOR , 0: LOCATE x, y: PRINT SPACE$(LEN(Prompt) + MaximumLength + 2);
 
@@ -463,7 +458,9 @@ DIM Page AS INTEGER
 DIM Position AS INTEGER
 DIM Row AS INTEGER
 
- IF FileExists("Import.txt") THEN
+ IF DIR$("Import.txt") = "" THEN
+  ERROR 53
+ ELSE
   FileH = FREEFILE
   OPEN "Import.txt" FOR BINARY LOCK READ WRITE AS FileH
    Initialize Table(), TableFileName, Selection, LossGainBlock
@@ -505,8 +502,6 @@ DIM Row AS INTEGER
     NEXT Column
    NEXT Row
   NEXT Page
- ELSE
-  ERROR 53
  END IF
 END SUB
 
@@ -585,7 +580,10 @@ DIM Row AS INTEGER
 
  IF NOT FileName = "" THEN
   FileName = FormatTableFileName(FileName)
-  IF FileExists(FileName) THEN
+  IF DIR$(FileName) = "" THEN
+   FileName = TableFileName
+   ERROR 53
+  ELSE
    IgnoreError = FALSE
    FileH = FREEFILE
    OPEN FileName FOR BINARY LOCK READ WRITE AS FileH
@@ -606,9 +604,6 @@ DIM Row AS INTEGER
      NEXT Row
     NEXT Page
    CLOSE FileH
-  ELSE
-   FileName = TableFileName
-   ERROR 53
   END IF
  END IF
 
@@ -726,7 +721,7 @@ DIM TableFileName AS STRING
      DisplayPage Table(), Selection
     ELSE
      DrawBox 5, 27, 24, 1
-     Center 6, "Last row is not empty."
+     CenterText 6, "Last row is not empty."
      DO WHILE INKEY$ = "": LOOP
      DisplayPage Table(), Selection
     END IF
@@ -769,7 +764,7 @@ DIM TableFileName AS STRING
      END IF
     ELSE
      DrawBox 5, 27, 24, 1
-     Center 6, "This page is reserved."
+     CenterText 6, "This page is reserved."
      DO WHILE INKEY$ = "": LOOP
      DisplayPage Table(), Selection
     END IF
@@ -1080,7 +1075,7 @@ DIM SaveTime AS STRING
   DeletedFile = FormatTableFileName(FileName)
   DrawBox 5, 28, 24, 1
   IF Choose(6, 30, "Remove " + CHR$(34) + TableBaseFileName(DeletedFile) + CHR$(34) + " Y/N?", "YN") = "Y" THEN
-   IF NOT FileExists("Names.lst") THEN CreateFile "Names.lst"
+   IF DIR$("Names.lst") = "" THEN CreateFile "Names.lst"
 
    KILL DeletedFile
    IgnoreError = FALSE
@@ -1245,7 +1240,7 @@ DIM ListFile AS STRING
 DIM SaveDate AS STRING
 DIM SaveTime AS STRING
 
- IF NOT FileExists("Names.lst") THEN CreateFile "Names.lst"
+ IF DIR$("Names.lst") = "" THEN CreateFile "Names.lst"
 
  Exists = FALSE
  IgnoreError = FALSE
